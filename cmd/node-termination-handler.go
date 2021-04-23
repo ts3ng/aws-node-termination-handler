@@ -52,8 +52,17 @@ const (
 )
 
 func main() {
+
+	// setup logfile to write to.
+	// might have to replace with a logging library that manages rotations and filesize. depending how verbose.
+	file, err := os.OpenFile("c:\\logs\\aws-node-termination-handler.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	// Zerolog uses json formatting by default, so change that to a human-readable format instead
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: timeFormat, NoColor: true})
+	if err == nil {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: file, TimeFormat: timeFormat, NoColor: true})
+	} else {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: timeFormat, NoColor: true})
+		log.Err(err).Msgf("Unable to create local file logging. Logging to stdout.")
+	}
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
@@ -65,7 +74,7 @@ func main() {
 	}
 
 	if nthConfig.JsonLogging {
-		log.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+		log.Logger = zerolog.New(file).With().Timestamp().Logger()
 	}
 	switch strings.ToLower(nthConfig.LogLevel) {
 	case "info":
